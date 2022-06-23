@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapFactory.sol';
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapPool.sol';
+import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
 import '../libraries/FixedPoint.sol';
-import '../libraries/SimswapOracleLibrary.sol';
 import '../libraries/SimswapLibrary.sol';
+import '../libraries/SimswapOracleLibrary.sol';
 
 // fixed window oracle that recomputes the average price for the entire period once every period
 // note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
@@ -19,13 +19,15 @@ contract ExampleOracleSimple {
     address public immutable token0;
     address public immutable token1;
 
-    uint256    public price0CumulativeLast;
-    uint256    public price1CumulativeLast;
-    uint32  public blockTimestampLast;
+    uint256 public price0CumulativeLast;
+    uint256 public price1CumulativeLast;
+    
+    uint32 public blockTimestampLast;
+
     FixedPoint.uq112x112 public price0Average;
     FixedPoint.uq112x112 public price1Average;
 
-    constructor(address factory, address tokenA, address tokenB) public {
+    constructor(address factory, address tokenA, address tokenB) {
         ISimswapPool _pool = ISimswapPool(SimswapLibrary.poolFor(factory, tokenA, tokenB));
         pool = _pool;
         token0 = _pool.token0();
@@ -34,7 +36,7 @@ contract ExampleOracleSimple {
         price1CumulativeLast = _pool.price1CumulativeLast(); // fetch the current accumulated price value (0 / 1)
         uint112 reserve0;
         uint112 reserve1;
-        (reserve0, reserve1, blockTimestampLast) = _pool.getReserves();
+        (reserve0, reserve1, blockTimestampLast) = _pool.slot0();
         require(reserve0 != 0 && reserve1 != 0, 'ExampleOracleSimple: NO_RESERVES'); // ensure that there's liquidity in the pool
     }
 

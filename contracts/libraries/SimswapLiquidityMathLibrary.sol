@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapPool.sol';
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapFactory.sol';
+import '@simswap/core/contracts/interfaces/ISimswapERC20.sol';
+import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
-import './libraries/FullMath.sol';
-import './libraries/LowGasSafeMath.sol';
-import './libraries/SimswapLibrary.sol';
+import './FullMath.sol';
+import './SimswapLibrary.sol';
+import './LowGasSafeMath.sol';
 
 // library containing some math for dealing with the liquidity shares of a pool, e.g. computing their exact value
 // in terms of the underlying tokens
@@ -50,7 +51,7 @@ library SimswapLiquidityMathLibrary {
         // first get reserves before the swap
         (reserveA, reserveB) = SimswapLibrary.getReserves(factory, tokenA, tokenB);
 
-        require(reserveA > 0 && reserveB > 0, 'SimswapArbitrageLibrary: ZERO_POOL_RESERVES');
+        require(reserveA != 0 && reserveB != 0, 'SimswapArbitrageLibrary: ZERO_POOL_RESERVES');
 
         // then compute how much to swap to arb to the true price
         (bool aToB, uint256 amountIn) = computeProfitMaximizingTrade(truePriceTokenA, truePriceTokenB, reserveA, reserveB);
@@ -80,7 +81,7 @@ library SimswapLiquidityMathLibrary {
         bool feeOn,
         uint256 kLast
     ) internal pure returns (uint256 tokenAAmount, uint256 tokenBAmount) {
-        if (feeOn && kLast > 0) {
+        if (feeOn && kLast != 0) {
             uint256 rootK = FullMath.sqrt(reservesA * reservesB);
             uint256 rootKLast = FullMath.sqrt(kLast);
             if (rootK > rootKLast) {
@@ -104,10 +105,11 @@ library SimswapLiquidityMathLibrary {
         uint256 liquidityAmount
     ) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
         (uint256 reservesA, uint256 reservesB) = SimswapLibrary.getReserves(factory, tokenA, tokenB);
-        ISimswapPool pool = ISimswapPool(SimswapLibrary.poolFor(factory, tokenA, tokenB));
+        address poolAddress = SimswapLibrary.poolFor(factory, tokenA, tokenB);
+        ISimswapPool pool = ISimswapPool(poolAddress);
         bool feeOn = ISimswapFactory(factory).feeTo() != address(0);
         uint256 kLast = feeOn ? pool.kLast() : 0;
-        uint256 totalSupply = pool.totalSupply();
+        uint256 totalSupply = ISimswapERC20(poolAddress).totalSupply();
         return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
     }
 
@@ -125,12 +127,13 @@ library SimswapLiquidityMathLibrary {
         uint256 tokenBAmount
     ) {
         bool feeOn = ISimswapFactory(factory).feeTo() != address(0);
-        ISimswapPool pool = ISimswapPool(SimswapLibrary.poolFor(factory, tokenA, tokenB));
+        address poolAddress = SimswapLibrary.poolFor(factory, tokenA, tokenB);
+        ISimswapPool pool = ISimswapPool(poolAddress);
         uint256 kLast = feeOn ? pool.kLast() : 0;
-        uint256 totalSupply = pool.totalSupply();
+        uint256 totalSupply = ISimswapERC20(poolAddress).totalSupply();
 
         // this also checks that totalSupply > 0
-        require(totalSupply >= liquidityAmount && liquidityAmount > 0, 'ComputeLiquidityValue: LIQUIDITY_AMOUNT');
+        require(totalSupply >= liquidityAmount && liquidityAmount != 0, 'ComputeLiquidityValue: LIQUIDITY_AMOUNT');
 
         (uint256 reservesA, uint256 reservesB) = getReservesAfterArbitrage(factory, tokenA, tokenB, truePriceTokenA, truePriceTokenB);
 

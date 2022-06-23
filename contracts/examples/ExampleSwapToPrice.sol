@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapPair.sol';
+import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
-import './libraries/TransferHelper.sol';
-import '../libraries/SimswapLiquidityMathLibrary.sol';
-import '../interfaces/IERC20Minimal.sol';
 import '../interfaces/ISimswapRouter.sol';
-import '../libraries/SafeMath.sol';
+import '../libraries/LowGasSafeMath.sol';
 import '../libraries/SimswapLibrary.sol';
+import '../libraries/SimswapLiquidityMathLibrary.sol';
+import '../libraries/TransferHelper.sol';
 
 contract ExampleSwapToPrice {
     using LowGasSafeMath for uint256;
@@ -16,7 +15,7 @@ contract ExampleSwapToPrice {
     ISimswapRouter public immutable router;
     address public immutable factory;
 
-    constructor(address factory_, ISimswapRouter router_) public {
+    constructor(address factory_, ISimswapRouter router_) {
         factory = factory_;
         router = router_;
     }
@@ -49,7 +48,7 @@ contract ExampleSwapToPrice {
             );
         }
 
-        require(amountIn > 0, 'ExampleSwapToPrice: ZERO_AMOUNT_IN');
+        require(amountIn != 0, 'ExampleSwapToPrice: ZERO_AMOUNT_IN');
 
         // spend up to the allowance of the token in
         uint256 maxSpend = aToB ? maxSpendTokenA : maxSpendTokenB;

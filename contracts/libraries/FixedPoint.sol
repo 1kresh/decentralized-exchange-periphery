@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import './libraries/FullMath.sol';
+import './FullMath.sol';
 
 // a library for handling binary fixed point numbers (https://en.wikipedia.org/wiki/Q_(number_format))
 library FixedPoint {
@@ -36,7 +36,7 @@ library FixedPoint {
     /// @dev Return a UQ112x112 which represents the ratio of the numerator to the denominator
     /// can be lossy
     function fraction(uint256 numerator, uint256 denominator) internal pure returns (uq112x112 memory _fraction) {
-        require(denominator > 0, 'FixedPoint::fraction: division by zero');
+        require(denominator != 0, 'FixedPoint::fraction: division by zero');
         if (numerator == 0) {
             _fraction._x = 0;
         } else {
@@ -48,6 +48,6 @@ library FixedPoint {
             }
             require(result <= type(uint224).max, 'FixedPoint::fraction: overflow');
             _fraction._x = uint224(result);
-    }
+        }
     }
 }

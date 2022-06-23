@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface ISimswapRouter {
-    function factory() external pure returns (address);
-    function WETH() external pure returns (address);
+    function factory() external view returns (address);
+    function WETH9() external view returns (address);
 
     function addLiquidity(
         address tokenA,

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapFactory.sol';
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapPool.sol';
+import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
 import '../libraries/FixedPoint.sol';
-import '../libraries/SafeMath.sol';
+import '../libraries/LowGasSafeMath.sol';
 import '../libraries/SimswapLibrary.sol';
 import '../libraries/SimswapOracleLibrary.sol';
 
@@ -15,7 +15,7 @@ import '../libraries/SimswapOracleLibrary.sol';
 // differs from the simple oracle which must be deployed once per pool.
 contract ExampleSlidingWindowOracle {
     using FixedPoint for *;
-    using SafeMath for uint256;
+    using LowGasSafeMath for uint256;
 
     struct Observation {
         uint256 timestamp;
@@ -40,7 +40,7 @@ contract ExampleSlidingWindowOracle {
     // mapping from pool address to a list of price observations of that pool
     mapping(address => Observation[]) public poolObservations;
 
-    constructor(address factory_, uint256 windowSize_, uint8 granularity_) public {
+    constructor(address factory_, uint256 windowSize_, uint8 granularity_) {
         require(granularity_ > 1, 'SlidingWindowOracle: GRANULARITY');
         require(
             (periodSize = windowSize_ / granularity_) * granularity_ == windowSize_,
@@ -96,9 +96,8 @@ contract ExampleSlidingWindowOracle {
         uint256 timeElapsed, uint256 amountIn
     ) private pure returns (uint256 amountOut) {
         // overflow is desired.
-        FixedPoint.uq112x112 memory priceAverage = FixedPoint.uq112x112();
-        priceAverage._x = uint224((priceCumulativeEnd - priceCumulativeStart) / timeElapsed);
-        amountOut = (priceAverage * amountIn).decode144();
+        FixedPoint.uq112x112 memory priceAverage = FixedPoint.uq112x112({_x: uint224((priceCumulativeEnd - priceCumulativeStart) / timeElapsed)});
+        amountOut = priceAverage.mul(amountIn).decode144();
     }
 
     // returns the amount out corresponding to the amount in for a given token using the moving average over the time
@@ -106,7 +105,7 @@ contract ExampleSlidingWindowOracle {
     // update must have been called for the bucket corresponding to timestamp `now - windowSize`
     function consult(address tokenIn, uint256 amountIn, address tokenOut) external view returns (uint256 amountOut) {
         address pool = SimswapLibrary.poolFor(factory, tokenIn, tokenOut);
-        Observation storage firstObservation = getFirstObservationInWindow(pool);
+        Observation memory firstObservation = getFirstObservationInWindow(pool);
 
         uint256 timeElapsed = block.timestamp - firstObservation.timestamp;
         require(timeElapsed <= windowSize, 'SlidingWindowOracle: MISSING_HISTORICAL_OBSERVATION');

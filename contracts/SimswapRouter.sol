@@ -1,33 +1,35 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import '@1kresh/decentralized-exchange-core/contracts/interfaces/ISimswapFactory.sol';
-import './libraries/TransferHelper.sol';
+import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+import '@simswap/core/contracts/interfaces/ISimswapERC20.sol';
 
 import './interfaces/ISimswapRouter.sol';
+import './interfaces/IWETH9.sol';
+
+import './libraries/LowGasSafeMath.sol';
 import './libraries/SimswapLibrary.sol';
-import './libraries/SafeMath.sol';
-import './interfaces/IERC20Minimal.sol';
-import './interfaces/IWETH.sol';
+import './libraries/TransferHelper.sol';
 
 contract SimswapRouter is ISimswapRouter {
     using LowGasSafeMath for uint256;
 
     address public immutable override factory;
-    address public immutable override WETH;
+    address public immutable override WETH9;
 
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, 'SimswapRouter: EXPIRED');
         _;
     }
 
-    constructor(address _factory, address _WETH) public {
+    constructor(address _factory, address _WETH9) {
         factory = _factory;
-        WETH = _WETH;
+        WETH9 = _WETH9;
     }
 
     receive() external payable {
-        assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
+        assert(msg.sender == WETH9); // only accept ETH via fallback from the WETH9 contract
     }
 
     // **** ADD LIQUIDITY ****
@@ -59,6 +61,7 @@ contract SimswapRouter is ISimswapRouter {
             }
         }
     }
+
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -85,16 +88,16 @@ contract SimswapRouter is ISimswapRouter {
     ) external virtual override payable ensure(deadline) returns (uint256 amountToken, uint256 amountETH, uint256 liquidity) {
         (amountToken, amountETH) = _addLiquidity(
             token,
-            WETH,
+            WETH9,
             amountTokenDesired,
             msg.value,
             amountTokenMin,
             amountETHMin
         );
-        address pool = SimswapLibrary.poolFor(factory, token, WETH);
+        address pool = SimswapLibrary.poolFor(factory, token, WETH9);
         TransferHelper.safeTransferFrom(token, msg.sender, pool, amountToken);
-        IWETH(WETH).deposit{value: amountETH}();
-        assert(IWETH(WETH).transfer(pool, amountETH));
+        IWETH9(WETH9).deposit{value: amountETH}();
+        assert(IWETH9(WETH9).transfer(pool, amountETH));
         liquidity = ISimswapPool(pool).mint(to);
         // refund dust eth, if any
         if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
@@ -111,7 +114,7 @@ contract SimswapRouter is ISimswapRouter {
         uint256 deadline
     ) public virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB) {
         address pool = SimswapLibrary.poolFor(factory, tokenA, tokenB);
-        ISimswapPool(pool).transferFrom(msg.sender, pool, liquidity); // send liquidity to pool
+        ISimswapERC20(pool).transferFrom(msg.sender, pool, liquidity); // send liquidity to pool
         (uint256 amount0, uint256 amount1) = ISimswapPool(pool).burn(to);
         (address token0,) = SimswapLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
@@ -128,7 +131,7 @@ contract SimswapRouter is ISimswapRouter {
     ) public virtual override ensure(deadline) returns (uint256 amountToken, uint256 amountETH) {
         (amountToken, amountETH) = removeLiquidity(
             token,
-            WETH,
+            WETH9,
             liquidity,
             amountTokenMin,
             amountETHMin,
@@ -136,7 +139,7 @@ contract SimswapRouter is ISimswapRouter {
             deadline
         );
         TransferHelper.safeTransfer(token, to, amountToken);
-        IWETH(WETH).withdraw(amountETH);
+        IWETH9(WETH9).withdraw(amountETH);
         TransferHelper.safeTransferETH(to, amountETH);
     }
     function removeLiquidityWithPermit(
@@ -151,7 +154,7 @@ contract SimswapRouter is ISimswapRouter {
     ) external virtual override returns (uint256 amountA, uint256 amountB) {
         address pool = SimswapLibrary.poolFor(factory, tokenA, tokenB);
         uint256 value = approveMax ? type(uint256).max : liquidity;
-        ISimswapPool(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
+        ISimswapERC20(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
     function removeLiquidityETHWithPermit(
@@ -163,9 +166,9 @@ contract SimswapRouter is ISimswapRouter {
         uint256 deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external virtual override returns (uint256 amountToken, uint256 amountETH) {
-        address pool = SimswapLibrary.poolFor(factory, token, WETH);
+        address pool = SimswapLibrary.poolFor(factory, token, WETH9);
         uint256 value = approveMax ? type(uint256).max : liquidity;
-        ISimswapPool(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
+        ISimswapERC20(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
     }
 
@@ -180,15 +183,15 @@ contract SimswapRouter is ISimswapRouter {
     ) public virtual override ensure(deadline) returns (uint256 amountETH) {
         (, amountETH) = removeLiquidity(
             token,
-            WETH,
+            WETH9,
             liquidity,
             amountTokenMin,
             amountETHMin,
             address(this),
             deadline
         );
-        TransferHelper.safeTransfer(token, to, balance(token, address(this)));
-        IWETH(WETH).withdraw(amountETH);
+        TransferHelper.safeTransfer(token, to, SimswapLibrary.balance(token, address(this)));
+        IWETH9(WETH9).withdraw(amountETH);
         TransferHelper.safeTransferETH(to, amountETH);
     }
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
@@ -200,9 +203,9 @@ contract SimswapRouter is ISimswapRouter {
         uint256 deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external virtual override returns (uint256 amountETH) {
-        address pool = SimswapLibrary.poolFor(factory, token, WETH);
+        address pool = SimswapLibrary.poolFor(factory, token, WETH9);
         uint256 value = approveMax ? type(uint256).max : liquidity;
-        ISimswapPool(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
+        ISimswapERC20(pool).permit(msg.sender, address(this), value, deadline, v, r, s);
         amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
             token, liquidity, amountTokenMin, amountETHMin, to, deadline
         );
@@ -258,11 +261,11 @@ contract SimswapRouter is ISimswapRouter {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path[0] == WETH, 'SimswapRouter: INVALID_PATH');
+        require(path[0] == WETH9, 'SimswapRouter: INVALID_PATH');
         amounts = SimswapLibrary.getAmountsOut(factory, msg.value, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'SimswapRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-        IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(SimswapLibrary.poolFor(factory, path[0], path[1]), amounts[0]));
+        IWETH9(WETH9).deposit{value: amounts[0]}();
+        assert(IWETH9(WETH9).transfer(SimswapLibrary.poolFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
     }
     function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, address[] calldata path, address to, uint256 deadline)
@@ -272,14 +275,14 @@ contract SimswapRouter is ISimswapRouter {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'SimswapRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH9, 'SimswapRouter: INVALID_PATH');
         amounts = SimswapLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, 'SimswapRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, SimswapLibrary.poolFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, address(this));
-        IWETH(WETH).withdraw(amounts[amounts.length - 1]);
+        IWETH9(WETH9).withdraw(amounts[amounts.length - 1]);
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
     function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
@@ -289,14 +292,14 @@ contract SimswapRouter is ISimswapRouter {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'SimswapRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH9, 'SimswapRouter: INVALID_PATH');
         amounts = SimswapLibrary.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, 'SimswapRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, SimswapLibrary.poolFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, address(this));
-        IWETH(WETH).withdraw(amounts[amounts.length - 1]);
+        IWETH9(WETH9).withdraw(amounts[amounts.length - 1]);
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
     function swapETHForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
@@ -307,11 +310,11 @@ contract SimswapRouter is ISimswapRouter {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path[0] == WETH, 'SimswapRouter: INVALID_PATH');
+        require(path[0] == WETH9, 'SimswapRouter: INVALID_PATH');
         amounts = SimswapLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= msg.value, 'SimswapRouter: EXCESSIVE_INPUT_AMOUNT');
-        IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(SimswapLibrary.poolFor(factory, path[0], path[1]), amounts[0]));
+        IWETH9(WETH9).deposit{value: amounts[0]}();
+        assert(IWETH9(WETH9).transfer(SimswapLibrary.poolFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
         // refund dust eth, if any
         if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
@@ -327,9 +330,9 @@ contract SimswapRouter is ISimswapRouter {
             uint256 amountInput;
             uint256 amountOutput;
             { // scope to avoid stack too deep errors
-            (uint256 reserve0, uint256 reserve1,) = pool.getReserves();
+            (uint256 reserve0, uint256 reserve1,) = pool.slot0();
             (uint256 reserveInput, uint256 reserveOutput) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
-            amountInput = balance(input, address(pool)) - reserveInput;
+            amountInput = SimswapLibrary.balance(input, address(pool)) - reserveInput;
             amountOutput = SimswapLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint256 amount0Out, uint256 amount1Out) = input == token0 ? (uint256(0), amountOutput) : (amountOutput, uint256(0));
@@ -347,10 +350,10 @@ contract SimswapRouter is ISimswapRouter {
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, SimswapLibrary.poolFor(factory, path[0], path[1]), amountIn
         );
-        uint256 balanceBefore = balance(path[path.length - 1], to);
+        uint256 balanceBefore = SimswapLibrary.balance(path[path.length - 1], to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
-            balance(path[path.length - 1], to) - balanceBefore >= amountOutMin,
+            SimswapLibrary.balance(path[path.length - 1], to) - balanceBefore >= amountOutMin,
             'SimswapRouter: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
@@ -366,14 +369,14 @@ contract SimswapRouter is ISimswapRouter {
         payable
         ensure(deadline)
     {
-        require(path[0] == WETH, 'SimswapRouter: INVALID_PATH');
+        require(path[0] == WETH9, 'SimswapRouter: INVALID_PATH');
         uint256 amountIn = msg.value;
-        IWETH(WETH).deposit{value: amountIn}();
-        assert(IWETH(WETH).transfer(SimswapLibrary.poolFor(factory, path[0], path[1]), amountIn));
-        uint256 balanceBefore = balance(path[path.length - 1], to);
+        IWETH9(WETH9).deposit{value: amountIn}();
+        assert(IWETH9(WETH9).transfer(SimswapLibrary.poolFor(factory, path[0], path[1]), amountIn));
+        uint256 balanceBefore = SimswapLibrary.balance(path[path.length - 1], to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
-            balance(path[path.length - 1], to) - balanceBefore >= amountOutMin,
+            SimswapLibrary.balance(path[path.length - 1], to) - balanceBefore >= amountOutMin,
             'SimswapRouter: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
@@ -389,14 +392,14 @@ contract SimswapRouter is ISimswapRouter {
         override
         ensure(deadline)
     {
-        require(path[path.length - 1] == WETH, 'SimswapRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH9, 'SimswapRouter: INVALID_PATH');
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, SimswapLibrary.poolFor(factory, path[0], path[1]), amountIn
         );
         _swapSupportingFeeOnTransferTokens(path, address(this));
-        uint256 amountOut = balance(WETH, address(this));
+        uint256 amountOut = SimswapLibrary.balance(WETH9, address(this));
         require(amountOut >= amountOutMin, 'SimswapRouter: INSUFFICIENT_OUTPUT_AMOUNT');
-        IWETH(WETH).withdraw(amountOut);
+        IWETH9(WETH9).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
 
