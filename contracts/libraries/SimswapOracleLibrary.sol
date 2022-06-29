@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+import { ISimswapPool } from '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
-import './FixedPoint.sol';
+import { FixedPoint } from './FixedPoint.sol';
 
 // library with helper methods for oracles that are concerned with computing average prices
 library SimswapOracleLibrary {
@@ -29,9 +29,11 @@ library SimswapOracleLibrary {
             uint32 timeElapsed = blockTimestamp - blockTimestampLast;
             // addition overflow is desired
             // counterfactual
-            price0Cumulative += uint256(FixedPoint.fraction(reserve1, reserve0)._x) * timeElapsed;
-            // counterfactual
-            price1Cumulative += uint256(FixedPoint.fraction(reserve0, reserve1)._x) * timeElapsed;
+            unchecked {
+                price0Cumulative += uint256(FixedPoint.fraction(reserve1, reserve0)._x) * timeElapsed;
+                // counterfactual
+                price1Cumulative += uint256(FixedPoint.fraction(reserve0, reserve1)._x) * timeElapsed;
+            }
         }
     }
 }

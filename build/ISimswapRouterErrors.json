@@ -1,0 +1,106 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountInMax",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "SimswapRouter_EXCESSIVE_INPUT_AMOUNT",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountAMin",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountAOptimal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountADesired",
+          "type": "uint256"
+        }
+      ],
+      "name": "SimswapRouter_INSUFFICIENT_A_AMOUNT",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountBMin",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountBOptimal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountBDesired",
+          "type": "uint256"
+        }
+      ],
+      "name": "SimswapRouter_INSUFFICIENT_B_AMOUNT",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountOutMin",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "SimswapRouter_INSUFFICIENT_OUTPUT_AMOUNT",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "path",
+          "type": "address[]"
+        }
+      ],
+      "name": "SimswapRouter_INVALID_PATH",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SimswapRouter_Not_WETH9",
+      "type": "error"
+    }
+  ],
+  "evm": {
+    "bytecode": {
+      "object": "",
+      "sourceMap": ""
+    },
+    "deployedBytecode": {
+      "object": "",
+      "sourceMap": ""
+    }
+  },
+  "metadata": "{\"compiler\":{\"version\":\"0.8.15+commit.e14f2714\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountInMax\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"name\":\"SimswapRouter_EXCESSIVE_INPUT_AMOUNT\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountAMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountAOptimal\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountADesired\",\"type\":\"uint256\"}],\"name\":\"SimswapRouter_INSUFFICIENT_A_AMOUNT\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountBMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountBOptimal\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountBDesired\",\"type\":\"uint256\"}],\"name\":\"SimswapRouter_INSUFFICIENT_B_AMOUNT\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOutMin\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"}],\"name\":\"SimswapRouter_INSUFFICIENT_OUTPUT_AMOUNT\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"path\",\"type\":\"address[]\"}],\"name\":\"SimswapRouter_INVALID_PATH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SimswapRouter_Not_WETH9\",\"type\":\"error\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"title\":\"Errors reverted by a router\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Contains all errors reverted by the router\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/interfaces/router/ISimswapRouterErrors.sol\":\"ISimswapRouterErrors\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/interfaces/router/ISimswapRouterErrors.sol\":{\"keccak256\":\"0x073e7e868e01b62402d8076bf4f34b8ab5e8511f6bc6b91bf72363b0868dc9ad\",\"license\":\"Unlicensed\",\"urls\":[\"bzz-raw://69772e132b5f8f64ccf337499f973adbc630261a065d0158f8baf7e718c70453\",\"dweb:/ipfs/QmT8ChFP28qL9DZAHRzdss8faKKNMzGEe42q4MfJMbJBf3\"]}},\"version\":1}",
+  "bytecode": ""
+}

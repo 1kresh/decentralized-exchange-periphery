@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import { SafeERC20 } from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-import '../interfaces/ISimswapRouter.sol';
-import '../libraries/LowGasSafeMath.sol';
-import '../libraries/SimswapLibrary.sol';
-import '../libraries/SimswapLiquidityMathLibrary.sol';
-import '../libraries/TransferHelper.sol';
+import { ISimswapPool } from '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+
+import { ISimswapRouter } from '../interfaces/ISimswapRouter.sol';
+import { SimswapLibrary } from '../libraries/SimswapLibrary.sol';
+import { SimswapLiquidityMathLibrary } from '../libraries/SimswapLiquidityMathLibrary.sol';
+
+error ExampleSwapToPrice_ZERO_AMOUNT_IN(uint256 amountIn);
+error ExampleSwapToPrice_ZERO_PRICE(uint256 truePriceTokenA, uint256 truePriceTokenB);
+error ExampleSwapToPrice_ZERO_SPEND(uint256 maxSpendTokenA, uint256 maxSpendTokenB);
 
 contract ExampleSwapToPrice {
-    using LowGasSafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     ISimswapRouter public immutable router;
     address public immutable factory;
@@ -34,9 +39,11 @@ contract ExampleSwapToPrice {
         uint256 deadline
     ) public {
         // true price is expressed as a ratio, so both values must be non-zero
-        require(truePriceTokenA != 0 && truePriceTokenB != 0, "ExampleSwapToPrice: ZERO_PRICE");
+        if (truePriceTokenA == 0 || truePriceTokenB == 0)
+            revert ExampleSwapToPrice_ZERO_PRICE(truePriceTokenA, truePriceTokenB);
         // caller can specify 0 for either if they wish to swap in only one direction, but not both
-        require(maxSpendTokenA != 0 || maxSpendTokenB != 0, "ExampleSwapToPrice: ZERO_SPEND");
+        if (maxSpendTokenA == 0 && maxSpendTokenB == 0)
+            revert ExampleSwapToPrice_ZERO_SPEND(maxSpendTokenA, maxSpendTokenB);
 
         bool aToB;
         uint256 amountIn;
@@ -48,7 +55,8 @@ contract ExampleSwapToPrice {
             );
         }
 
-        require(amountIn != 0, 'ExampleSwapToPrice: ZERO_AMOUNT_IN');
+        if (amountIn == 0)
+            revert ExampleSwapToPrice_ZERO_AMOUNT_IN(amountIn);
 
         // spend up to the allowance of the token in
         uint256 maxSpend = aToB ? maxSpendTokenA : maxSpendTokenB;
@@ -58,8 +66,8 @@ contract ExampleSwapToPrice {
 
         address tokenIn = aToB ? tokenA : tokenB;
         address tokenOut = aToB ? tokenB : tokenA;
-        TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
-        TransferHelper.safeApprove(tokenIn, address(router), amountIn);
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).safeApprove(address(router), amountIn);
 
         address[] memory path = new address[](2);
         path[0] = tokenIn;

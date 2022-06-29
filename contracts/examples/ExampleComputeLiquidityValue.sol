@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-import '../libraries/LowGasSafeMath.sol';
-import '../libraries/SimswapLiquidityMathLibrary.sol';
+import { SimswapLiquidityMathLibrary } from '../libraries/SimswapLiquidityMathLibrary.sol';
 
 contract ExampleComputeLiquidityValue {
-    using LowGasSafeMath for uint256;
-
     address public immutable factory;
 
     constructor(address factory_) {

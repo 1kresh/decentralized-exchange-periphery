@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-interface ISimswapRouter {
+import { ISimswapRouterErrors } from './router/ISimswapRouterErrors.sol';
+
+interface ISimswapRouter is ISimswapRouterErrors {
     function factory() external view returns (address);
     function WETH9() external view returns (address);
 

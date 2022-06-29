@@ -1,0 +1,42 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "Q112",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RESOLUTION",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "evm": {
+    "bytecode": {
+      "object": "60ad610039600b82828239805160001a60731461002c57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c80633bf7a83e146042578063552f888a14605f575b600080fd5b604c600160701b81565b6040519081526020015b60405180910390f35b6066607081565b60405160ff9091168152602001605656fea2646970667358221220b23341a9b6e1c31e154165a0762e914223ed1cda9dff48402987c542030b987364736f6c634300080f0033",
+      "sourceMap": "573:1610:19:-:0;;;;;;;;;;;;;;;-1:-1:-1;;;573:1610:19;;;;;;;;;;;;;;;;;"
+    },
+    "deployedBytecode": {
+      "object": "7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c80633bf7a83e146042578063552f888a14605f575b600080fd5b604c600160701b81565b6040519081526020015b60405180910390f35b6066607081565b60405160ff9091168152602001605656fea2646970667358221220b23341a9b6e1c31e154165a0762e914223ed1cda9dff48402987c542030b987364736f6c634300080f0033",
+      "sourceMap": "573:1610:19:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;644:62;;-1:-1:-1;;;644:62:19;;;;;168:25:30;;;156:2;141:18;644:62:19;;;;;;;;599:38;;634:3;599:38;;;;;384:4:30;372:17;;;354:36;;342:2;327:18;599:38:19;204:192:30"
+    }
+  },
+  "metadata": "{\"compiler\":{\"version\":\"0.8.15+commit.e14f2714\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"Q112\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RESOLUTION\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/libraries/FixedPoint.sol\":\"FixedPoint\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/libraries/FixedPoint.sol\":{\"keccak256\":\"0xacacc0aa942fae1b10a9a4157b20d50c4b074fb518c2d942e9ec7c7bc38bffb7\",\"license\":\"Unlicensed\",\"urls\":[\"bzz-raw://0116dd0a2e1cbd9f946034faa384c2f49f9bbab048a44ad1e4ac9b817582c8f8\",\"dweb:/ipfs/QmWL2FZNK9FZqe38gSCb3iUZgkpwx9KFbdaiwxxbjP9DEy\"]},\"contracts/libraries/FullMath.sol\":{\"keccak256\":\"0xbcba9a118dc93aaa412917a50d2f0374e180d58ef703446eab03b5bc04a9bec9\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://4969818dc7fd3a2e22d03c1455f5bc8d95e0263b3bc791a5f2a0f2b17a92ce88\",\"dweb:/ipfs/QmSjgHXpXYmmYs6DiLkAEP7LpZvHtpF6MZQwEPnvYZoZdW\"]}},\"version\":1}",
+  "bytecode": "60ad610039600b82828239805160001a60731461002c57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603d5760003560e01c80633bf7a83e146042578063552f888a14605f575b600080fd5b604c600160701b81565b6040519081526020015b60405180910390f35b6066607081565b60405160ff9091168152602001605656fea2646970667358221220b23341a9b6e1c31e154165a0762e914223ed1cda9dff48402987c542030b987364736f6c634300080f0033"
+}

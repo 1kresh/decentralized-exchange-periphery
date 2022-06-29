@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
-import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+import { ISimswapFactory } from '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import { ISimswapPool } from '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
-import '../libraries/FixedPoint.sol';
-import '../libraries/LowGasSafeMath.sol';
-import '../libraries/SimswapLibrary.sol';
-import '../libraries/SimswapOracleLibrary.sol';
+import { FixedPoint, uq112x112 } from '../libraries/FixedPoint.sol';
+import { SimswapLibrary } from '../libraries/SimswapLibrary.sol';
+import { SimswapOracleLibrary } from '../libraries/SimswapOracleLibrary.sol';
+
+
+error SlidingWindowOracle_GRANULARITY(uint8 granularity_);
+error SlidingWindowOracle_MISSING_HISTORICAL_OBSERVATION(uint256 timeElapsed, uint256 windowSize);
+error SlidingWindowOracle_UNEXPECTED_TIME_ELAPSED(uint256 timeElapsed, uint256 windowSize, uint256 periodSize);
+error SlidingWindowOracle_WINDOW_NOT_EVENLY_DIVISIBLE(uint256 periodSize, uint256 windowSize_);
 
 // sliding window oracle that uses observations collected over a window to provide moving price averages in the past
 // `windowSize` with a precision of `windowSize / granularity`
@@ -15,7 +20,6 @@ import '../libraries/SimswapOracleLibrary.sol';
 // differs from the simple oracle which must be deployed once per pool.
 contract ExampleSlidingWindowOracle {
     using FixedPoint for *;
-    using LowGasSafeMath for uint256;
 
     struct Observation {
         uint256 timestamp;
@@ -41,11 +45,12 @@ contract ExampleSlidingWindowOracle {
     mapping(address => Observation[]) public poolObservations;
 
     constructor(address factory_, uint256 windowSize_, uint8 granularity_) {
-        require(granularity_ > 1, 'SlidingWindowOracle: GRANULARITY');
-        require(
-            (periodSize = windowSize_ / granularity_) * granularity_ == windowSize_,
-            'SlidingWindowOracle: WINDOW_NOT_EVENLY_DIVISIBLE'
-        );
+        if (granularity_ <= 1)
+            revert SlidingWindowOracle_GRANULARITY(granularity_);
+        unchecked {
+            if ((periodSize = windowSize_ / granularity_) * granularity_ != windowSize_)
+                revert SlidingWindowOracle_WINDOW_NOT_EVENLY_DIVISIBLE(periodSize, windowSize_);
+        }
         factory = factory_;
         windowSize = windowSize_;
         granularity = granularity_;
@@ -53,26 +58,32 @@ contract ExampleSlidingWindowOracle {
 
     // returns the index of the observation corresponding to the given timestamp
     function observationIndexOf(uint256 timestamp) public view returns (uint8 index) {
-        uint256 epochPeriod = timestamp / periodSize;
-        return uint8(epochPeriod % granularity);
+        unchecked {
+            uint256 epochPeriod = timestamp / periodSize;
+            return uint8(epochPeriod % granularity);
+        }
     }
 
     // returns the observation from the oldest epoch (at the beginning of the window) relative to the current time
     function getFirstObservationInWindow(address pool) private view returns (Observation storage firstObservation) {
         uint8 observationIndex = observationIndexOf(block.timestamp);
         // no overflow issue. if observationIndex + 1 overflows, result is still zero.
-        uint8 firstObservationIndex = (observationIndex + 1) % granularity;
-        firstObservation = poolObservations[pool][firstObservationIndex];
+        unchecked {
+            firstObservation = poolObservations[pool][(observationIndex + 1) % granularity];
+        }
     }
 
     // update the cumulative price for the observation at the current timestamp. each observation is updated at most
     // once per epoch period.
     function update(address tokenA, address tokenB) external {
         address pool = SimswapLibrary.poolFor(factory, tokenA, tokenB);
-
+        
         // populate the array with empty observations (first call only)
-        for (uint256 i = poolObservations[pool].length; i < granularity; i++) {
+        for (uint256 i = poolObservations[pool].length; i < granularity;) {
             poolObservations[pool].push();
+            unchecked {
+                ++i;
+            }
         }
 
         // get the observation for the current period
@@ -96,8 +107,10 @@ contract ExampleSlidingWindowOracle {
         uint256 timeElapsed, uint256 amountIn
     ) private pure returns (uint256 amountOut) {
         // overflow is desired.
-        FixedPoint.uq112x112 memory priceAverage = FixedPoint.uq112x112({_x: uint224((priceCumulativeEnd - priceCumulativeStart) / timeElapsed)});
-        amountOut = priceAverage.mul(amountIn).decode144();
+        unchecked {
+            uq112x112 memory priceAverage = uq112x112({_x: uint224((priceCumulativeEnd - priceCumulativeStart) / timeElapsed)});
+            amountOut = priceAverage.mul(amountIn).decode144();
+        }
     }
 
     // returns the amount out corresponding to the amount in for a given token using the moving average over the time
@@ -108,9 +121,13 @@ contract ExampleSlidingWindowOracle {
         Observation memory firstObservation = getFirstObservationInWindow(pool);
 
         uint256 timeElapsed = block.timestamp - firstObservation.timestamp;
-        require(timeElapsed <= windowSize, 'SlidingWindowOracle: MISSING_HISTORICAL_OBSERVATION');
+        if (timeElapsed > windowSize)
+            revert SlidingWindowOracle_MISSING_HISTORICAL_OBSERVATION(timeElapsed, windowSize);
         // should never happen.
-        require(timeElapsed >= windowSize - periodSize * 2, 'SlidingWindowOracle: UNEXPECTED_TIME_ELAPSED');
+        unchecked {
+            if (timeElapsed < windowSize - periodSize * 2)
+                revert SlidingWindowOracle_UNEXPECTED_TIME_ELAPSED(timeElapsed, windowSize, periodSize);
+        }
 
         (uint256 price0Cumulative, uint256 price1Cumulative,) = SimswapOracleLibrary.currentCumulativePrices(pool);
         (address token0,) = SimswapLibrary.sortTokens(tokenIn, tokenOut);

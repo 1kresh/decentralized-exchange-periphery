@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-import '@simswap/core/contracts/interfaces/ISimswapERC20.sol';
-import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
-import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+import { ISimswapERC20 } from '@simswap/core/contracts/interfaces/ISimswapERC20.sol';
+import { ISimswapFactory } from '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import { ISimswapPool } from '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
-import './FullMath.sol';
-import './SimswapLibrary.sol';
-import './LowGasSafeMath.sol';
+import { FullMath } from './FullMath.sol';
+import { SimswapLibrary } from './SimswapLibrary.sol';
+
+error ComputeLiquidityValue_LIQUIDITY_AMOUNT(uint256 totalSupply, uint256 liquidityAmount);
+error SimswapArbitrageLibrary_ZERO_POOL_RESERVES();
 
 // library containing some math for dealing with the liquidity shares of a pool, e.g. computing their exact value
 // in terms of the underlying tokens
 library SimswapLiquidityMathLibrary {
-    using LowGasSafeMath for uint256;
-
     /// @dev Computes the direction and magnitude of the profit-maximizing trade
     function computeProfitMaximizingTrade(
         uint256 truePriceTokenA,
@@ -32,7 +32,10 @@ library SimswapLiquidityMathLibrary {
                 (aToB ? truePriceTokenB : truePriceTokenA) * 997
             )
         );
-        uint256 rightSide = (aToB ? reserveA * 1000 : reserveB * 1000) / 997;
+        uint256 rightSide = (aToB ? reserveA * 1000 : reserveB * 1000);
+        unchecked {
+            rightSide /= 997;
+        }
 
         if (leftSide < rightSide) return (false, 0);
 
@@ -51,7 +54,8 @@ library SimswapLiquidityMathLibrary {
         // first get reserves before the swap
         (reserveA, reserveB) = SimswapLibrary.getReserves(factory, tokenA, tokenB);
 
-        require(reserveA != 0 && reserveB != 0, 'SimswapArbitrageLibrary: ZERO_POOL_RESERVES');
+        if (reserveA == 0 || reserveB == 0)
+            revert SimswapArbitrageLibrary_ZERO_POOL_RESERVES();
 
         // then compute how much to swap to arb to the true price
         (bool aToB, uint256 amountIn) = computeProfitMaximizingTrade(truePriceTokenA, truePriceTokenB, reserveA, reserveB);
@@ -60,15 +64,17 @@ library SimswapLiquidityMathLibrary {
             return (reserveA, reserveB);
         }
 
-        // now affect the trade to the reserves
-        if (aToB) {
-            uint256 amountOut = SimswapLibrary.getAmountOut(amountIn, reserveA, reserveB);
-            reserveA += amountIn;
-            reserveB -= amountOut;
-        } else {
-            uint256 amountOut = SimswapLibrary.getAmountOut(amountIn, reserveB, reserveA);
-            reserveB += amountIn;
-            reserveA -= amountOut;
+        unchecked {
+            // now affect the trade to the reserves
+            if (aToB) {
+                uint256 amountOut = SimswapLibrary.getAmountOut(amountIn, reserveA, reserveB);
+                reserveA += amountIn;
+                reserveB -= amountOut;
+            } else {
+                uint256 amountOut = SimswapLibrary.getAmountOut(amountIn, reserveB, reserveA);
+                reserveB += amountIn;
+                reserveA -= amountOut;
+            }
         }
     }
 
@@ -92,7 +98,12 @@ library SimswapLiquidityMathLibrary {
                 totalSupply = totalSupply + feeLiquidity;
             }
         }
-        return (reservesA * liquidityAmount / totalSupply, reservesB * liquidityAmount / totalSupply);
+        tokenAAmount = reservesA * liquidityAmount;
+        tokenBAmount = reservesB * liquidityAmount;
+        unchecked {
+            tokenAAmount /= totalSupply;
+            tokenBAmount /= totalSupply;
+        }
     }
 
     /// @dev Get all current parameters from the pool and compute value of a liquidity amount
@@ -133,7 +144,8 @@ library SimswapLiquidityMathLibrary {
         uint256 totalSupply = ISimswapERC20(poolAddress).totalSupply();
 
         // this also checks that totalSupply > 0
-        require(totalSupply >= liquidityAmount && liquidityAmount != 0, 'ComputeLiquidityValue: LIQUIDITY_AMOUNT');
+        if (totalSupply < liquidityAmount || liquidityAmount == 0)
+            revert ComputeLiquidityValue_LIQUIDITY_AMOUNT(totalSupply, liquidityAmount);
 
         (uint256 reservesA, uint256 reservesB) = getReservesAfterArbitrage(factory, tokenA, tokenB, truePriceTokenA, truePriceTokenB);
 

@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
-import '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
-import '@simswap/core/contracts/interfaces/ISimswapPool.sol';
+import { ISimswapFactory } from '@simswap/core/contracts/interfaces/ISimswapFactory.sol';
+import { ISimswapPool } from '@simswap/core/contracts/interfaces/ISimswapPool.sol';
 
-import '../libraries/FixedPoint.sol';
-import '../libraries/SimswapLibrary.sol';
-import '../libraries/SimswapOracleLibrary.sol';
+import { FixedPoint, uq112x112 } from '../libraries/FixedPoint.sol';
+import { SimswapLibrary } from '../libraries/SimswapLibrary.sol';
+import { SimswapOracleLibrary } from '../libraries/SimswapOracleLibrary.sol';
+
+error ExampleOracleSimple_INVALID_TOKEN(address token, address token1);
+error ExampleOracleSimple_NO_RESERVES(uint112 reserve0, uint112 reserve1);
+error ExampleOracleSimple_PERIOD_NOT_ELAPSED(uint32 timeElapsed, uint256 PERIOD);
 
 // fixed window oracle that recomputes the average price for the entire period once every period
 // note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
@@ -24,8 +28,8 @@ contract ExampleOracleSimple {
     
     uint32 public blockTimestampLast;
 
-    FixedPoint.uq112x112 public price0Average;
-    FixedPoint.uq112x112 public price1Average;
+    uq112x112 public price0Average;
+    uq112x112 public price1Average;
 
     constructor(address factory, address tokenA, address tokenB) {
         ISimswapPool _pool = ISimswapPool(SimswapLibrary.poolFor(factory, tokenA, tokenB));
@@ -37,7 +41,8 @@ contract ExampleOracleSimple {
         uint112 reserve0;
         uint112 reserve1;
         (reserve0, reserve1, blockTimestampLast) = _pool.slot0();
-        require(reserve0 != 0 && reserve1 != 0, 'ExampleOracleSimple: NO_RESERVES'); // ensure that there's liquidity in the pool
+        if (reserve0 == 0 || reserve1 == 0) // ensure that there's liquidity in the pool
+            revert ExampleOracleSimple_NO_RESERVES(reserve0, reserve1);
     }
 
     function update() external {
@@ -46,13 +51,16 @@ contract ExampleOracleSimple {
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
 
         // ensure that at least one full period has passed since the last update
-        require(timeElapsed >= PERIOD, 'ExampleOracleSimple: PERIOD_NOT_ELAPSED');
+        if (timeElapsed < PERIOD)
+            revert ExampleOracleSimple_PERIOD_NOT_ELAPSED(timeElapsed, PERIOD);
 
         // overflow is desired, casting never truncates
         // cumulative price is in (uq112x112 price * seconds) units so we simply wrap it after division by time elapsed
-        price0Average = FixedPoint.uq112x112(uint224((price0Cumulative - price0CumulativeLast) / timeElapsed));
-        price1Average = FixedPoint.uq112x112(uint224((price1Cumulative - price1CumulativeLast) / timeElapsed));
-
+        unchecked {
+            price0Average = uq112x112(uint224((price0Cumulative - price0CumulativeLast) / timeElapsed));
+            price1Average = uq112x112(uint224((price1Cumulative - price1CumulativeLast) / timeElapsed));
+        }
+        
         price0CumulativeLast = price0Cumulative;
         price1CumulativeLast = price1Cumulative;
         blockTimestampLast = blockTimestamp;
@@ -63,7 +71,8 @@ contract ExampleOracleSimple {
         if (token == token0) {
             amountOut = price0Average.mul(amountIn).decode144();
         } else {
-            require(token == token1, 'ExampleOracleSimple: INVALID_TOKEN');
+            if (token != token1)
+                revert ExampleOracleSimple_INVALID_TOKEN(token, token1);
             amountOut = price1Average.mul(amountIn).decode144();
         }
     }
