@@ -100,28 +100,35 @@ library SimswapLibrary {
             revert SimswapLibrary_INVALID_PATH(path);
         amounts = new uint256[](pathLengthSpecific);
         amounts[0] = amountIn;
+        uint256 iUp;
         unchecked {
             pathLengthSpecific -= 2;
             for (uint256 i; i <= pathLengthSpecific;) {
-                (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i], path[i + 1]);
-                amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
-                ++i;
+                ++iUp;
+                (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i], path[iUp]);
+                amounts[iUp] = getAmountOut(amounts[i], reserveIn, reserveOut);
+                i = iUp;
             }   
         }
     }
 
     /// @dev Performs chained getAmountIn calculations on any number of pools
     function getAmountsIn(address factory, uint256 amountOut, address[] memory path) internal view returns (uint256[] memory amounts) {
-        uint256 pathLength = path.length;
-        if (pathLength <= 1)
+        uint256 pathLengthSpecific = path.length;
+        if (pathLengthSpecific <= 1)
             revert SimswapLibrary_INVALID_PATH(path);
-        amounts = new uint256[](pathLength);
+        amounts = new uint256[](pathLengthSpecific);
         unchecked {
-            amounts[pathLength - 1] = amountOut;
-            for (uint256 i = pathLength - 1; i != 0;) {
-                (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i - 1], path[i]);
-                amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
-                --i;
+            pathLengthSpecific -= 1;
+        }
+        uint256 iDown = pathLengthSpecific;
+        unchecked {
+            amounts[pathLengthSpecific] = amountOut;
+            for (uint256 i = pathLengthSpecific; i != 0;) {
+                --iDown;
+                (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[iDown], path[i]);
+                amounts[iDown] = getAmountIn(amounts[i], reserveIn, reserveOut);
+                i = iDown;
             }
         }
     }

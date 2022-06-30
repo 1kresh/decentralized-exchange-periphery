@@ -79,7 +79,8 @@ contract ExampleSlidingWindowOracle {
         address pool = SimswapLibrary.poolFor(factory, tokenA, tokenB);
         
         // populate the array with empty observations (first call only)
-        for (uint256 i = poolObservations[pool].length; i < granularity;) {
+        uint256 i = poolObservations[pool].length;
+        for (i; i < granularity;) {
             poolObservations[pool].push();
             unchecked {
                 ++i;

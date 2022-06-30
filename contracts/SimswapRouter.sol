@@ -254,23 +254,30 @@ contract SimswapRouter is ISimswapRouter, Multicall, DeadlineChecker {
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pool
     function _swap(uint256[] memory amounts, address[] memory path, address _to) internal virtual {
+        uint256 pathLengthReduced;
         unchecked {
-            uint256 pathLengthReduced = path.length - 2;
-            for (uint256 i; i <= pathLengthReduced;) {
-                address input = path[i];
-                // increasing here to optimize future calculations
+            pathLengthReduced = path.length - 2;
+        }
+        uint256 i;
+        for (i; i <= pathLengthReduced;) {
+            address input = path[i];
+            // increasing here to optimize future calculations
+            unchecked {
                 ++i;
-                address output = path[i];
-                (address token0,) = SimswapLibrary.sortTokens(input, output);
-                uint256 amountOut = amounts[i];
-                (uint256 amount0Out, uint256 amount1Out) = input == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
-                address to = i <= pathLengthReduced ? SimswapLibrary.poolFor(factory, output, path[i + 1]) : _to;
-                ISimswapPool(SimswapLibrary.poolFor(factory, input, output))
-                    .swap(
-                        amount0Out, amount1Out, to, new bytes(0)
-                    );
             }
-        }    
+            address output = path[i];
+            (address token0,) = SimswapLibrary.sortTokens(input, output);
+            uint256 amountOut = amounts[i];
+            (uint256 amount0Out, uint256 amount1Out) = input == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
+            address to;
+            unchecked {
+                to = i <= pathLengthReduced ? SimswapLibrary.poolFor(factory, output, path[i + 1]) : _to;
+            }
+            ISimswapPool(SimswapLibrary.poolFor(factory, input, output))
+                .swap(
+                    amount0Out, amount1Out, to, new bytes(0)
+                );
+        }
     }
 
     function swapExactTokensForTokens(
@@ -427,7 +434,8 @@ contract SimswapRouter is ISimswapRouter, Multicall, DeadlineChecker {
         unchecked {
             pathLengthReduced = path.length - 2;
         }
-        for (uint256 i; i <= pathLengthReduced;) {
+        uint256 i;
+        for (i; i <= pathLengthReduced;) {
             address input = path[i];
             // increasing here to optimize future calculations
             unchecked {
