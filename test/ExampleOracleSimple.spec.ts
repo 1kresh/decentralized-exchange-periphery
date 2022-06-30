@@ -4,7 +4,7 @@ import { BigNumber } from 'ethers/utils';
 import { solidity, MockProvider, createFixtureLoader, deployContract } from 'ethereum-waffle';
 
 import { expandTo18Decimals, mineBlock, encodePrice } from './shared/utilities';
-import { v2Fixture } from './shared/fixtures';
+import { Fixture } from './shared/fixtures';
 
 import ExampleOracleSimple from '../build/ExampleOracleSimple.json';
 
