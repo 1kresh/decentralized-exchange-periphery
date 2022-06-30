@@ -8,7 +8,10 @@ import { ISimswapPool } from '@simswap/core/contracts/interfaces/ISimswapPool.so
 import { FullMath } from './FullMath.sol';
 import { SimswapLibrary } from './SimswapLibrary.sol';
 
-error ComputeLiquidityValue_LIQUIDITY_AMOUNT(uint256 totalSupply, uint256 liquidityAmount);
+error ComputeLiquidityValue_LIQUIDITY_AMOUNT(
+    uint256 totalSupply,
+    uint256 liquidityAmount
+);
 error SimswapArbitrageLibrary_ZERO_POOL_RESERVES();
 
 // library containing some math for dealing with the liquidity shares of a pool, e.g. computing their exact value
@@ -20,8 +23,10 @@ library SimswapLiquidityMathLibrary {
         uint256 truePriceTokenB,
         uint256 reserveA,
         uint256 reserveB
-    ) pure internal returns (bool aToB, uint256 amountIn) {
-        aToB = FullMath.mulDiv(reserveA, truePriceTokenB, reserveB) < truePriceTokenA;
+    ) internal pure returns (bool aToB, uint256 amountIn) {
+        aToB =
+            FullMath.mulDiv(reserveA, truePriceTokenB, reserveB) <
+            truePriceTokenA;
 
         uint256 invariant = reserveA * reserveB;
 
@@ -50,15 +55,24 @@ library SimswapLiquidityMathLibrary {
         address tokenB,
         uint256 truePriceTokenA,
         uint256 truePriceTokenB
-    ) view internal returns (uint256 reserveA, uint256 reserveB) {
+    ) internal view returns (uint256 reserveA, uint256 reserveB) {
         // first get reserves before the swap
-        (reserveA, reserveB) = SimswapLibrary.getReserves(factory, tokenA, tokenB);
+        (reserveA, reserveB) = SimswapLibrary.getReserves(
+            factory,
+            tokenA,
+            tokenB
+        );
 
         if (reserveA == 0 || reserveB == 0)
             revert SimswapArbitrageLibrary_ZERO_POOL_RESERVES();
 
         // then compute how much to swap to arb to the true price
-        (bool aToB, uint256 amountIn) = computeProfitMaximizingTrade(truePriceTokenA, truePriceTokenB, reserveA, reserveB);
+        (bool aToB, uint256 amountIn) = computeProfitMaximizingTrade(
+            truePriceTokenA,
+            truePriceTokenB,
+            reserveA,
+            reserveB
+        );
 
         if (amountIn == 0) {
             return (reserveA, reserveB);
@@ -67,11 +81,19 @@ library SimswapLiquidityMathLibrary {
         unchecked {
             // now affect the trade to the reserves
             if (aToB) {
-                uint256 amountOut = SimswapLibrary.getAmountOut(amountIn, reserveA, reserveB);
+                uint256 amountOut = SimswapLibrary.getAmountOut(
+                    amountIn,
+                    reserveA,
+                    reserveB
+                );
                 reserveA += amountIn;
                 reserveB -= amountOut;
             } else {
-                uint256 amountOut = SimswapLibrary.getAmountOut(amountIn, reserveB, reserveA);
+                uint256 amountOut = SimswapLibrary.getAmountOut(
+                    amountIn,
+                    reserveB,
+                    reserveA
+                );
                 reserveB += amountIn;
                 reserveA -= amountOut;
             }
@@ -94,7 +116,11 @@ library SimswapLiquidityMathLibrary {
                 uint256 numerator1 = totalSupply;
                 uint256 numerator2 = rootK - rootKLast;
                 uint256 denominator = rootK * 5 + rootKLast;
-                uint256 feeLiquidity = FullMath.mulDiv(numerator1, numerator2, denominator);
+                uint256 feeLiquidity = FullMath.mulDiv(
+                    numerator1,
+                    numerator2,
+                    denominator
+                );
                 totalSupply = totalSupply + feeLiquidity;
             }
         }
@@ -115,13 +141,25 @@ library SimswapLiquidityMathLibrary {
         address tokenB,
         uint256 liquidityAmount
     ) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
-        (uint256 reservesA, uint256 reservesB) = SimswapLibrary.getReserves(factory, tokenA, tokenB);
+        (uint256 reservesA, uint256 reservesB) = SimswapLibrary.getReserves(
+            factory,
+            tokenA,
+            tokenB
+        );
         address poolAddress = SimswapLibrary.poolFor(factory, tokenA, tokenB);
         ISimswapPool pool = ISimswapPool(poolAddress);
         bool feeOn = ISimswapFactory(factory).feeTo() != address(0);
         uint256 kLast = feeOn ? pool.kLast() : 0;
         uint256 totalSupply = ISimswapERC20(poolAddress).totalSupply();
-        return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
+        return
+            computeLiquidityValue(
+                reservesA,
+                reservesB,
+                totalSupply,
+                liquidityAmount,
+                feeOn,
+                kLast
+            );
     }
 
     /// @dev Given two tokens, tokenA and tokenB, and their "true price", i.e. the observed ratio of value of token A to token B,
@@ -133,10 +171,7 @@ library SimswapLiquidityMathLibrary {
         uint256 truePriceTokenA,
         uint256 truePriceTokenB,
         uint256 liquidityAmount
-    ) internal view returns (
-        uint256 tokenAAmount,
-        uint256 tokenBAmount
-    ) {
+    ) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
         bool feeOn = ISimswapFactory(factory).feeTo() != address(0);
         address poolAddress = SimswapLibrary.poolFor(factory, tokenA, tokenB);
         ISimswapPool pool = ISimswapPool(poolAddress);
@@ -145,10 +180,27 @@ library SimswapLiquidityMathLibrary {
 
         // this also checks that totalSupply > 0
         if (totalSupply < liquidityAmount || liquidityAmount == 0)
-            revert ComputeLiquidityValue_LIQUIDITY_AMOUNT(totalSupply, liquidityAmount);
+            revert ComputeLiquidityValue_LIQUIDITY_AMOUNT(
+                totalSupply,
+                liquidityAmount
+            );
 
-        (uint256 reservesA, uint256 reservesB) = getReservesAfterArbitrage(factory, tokenA, tokenB, truePriceTokenA, truePriceTokenB);
+        (uint256 reservesA, uint256 reservesB) = getReservesAfterArbitrage(
+            factory,
+            tokenA,
+            tokenB,
+            truePriceTokenA,
+            truePriceTokenB
+        );
 
-        return computeLiquidityValue(reservesA, reservesB, totalSupply, liquidityAmount, feeOn, kLast);
+        return
+            computeLiquidityValue(
+                reservesA,
+                reservesB,
+                totalSupply,
+                liquidityAmount,
+                feeOn,
+                kLast
+            );
     }
 }

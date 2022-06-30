@@ -8,10 +8,7 @@ library TransferHelper {
     /// @dev Fails with `STE`
     /// @param recipient The destination of the transfer
     /// @param value The value to be transferred
-    function safeTransferETH(
-        address recipient,
-        uint256 value
-    ) internal {
+    function safeTransferETH(address recipient, uint256 value) internal {
         payable(recipient).transfer(value);
     }
 }

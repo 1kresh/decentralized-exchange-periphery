@@ -1,64 +1,65 @@
-import chai, { expect } from 'chai'
-import { Contract } from 'ethers'
-import { MaxUint256 } from 'ethers/constants'
-import { BigNumber, bigNumberify, defaultAbiCoder, formatEther } from 'ethers/utils'
-import { solidity, MockProvider, createFixtureLoader, deployContract } from 'ethereum-waffle'
+import chai, { expect } from 'chai';
+import { Contract } from 'ethers';
+import { MaxUint256 } from 'ethers/constants';
+import { BigNumber, bigNumberify, defaultAbiCoder, formatEther } from 'ethers/utils';
+import { solidity, MockProvider, createFixtureLoader, deployContract } from 'ethereum-waffle';
 
-import { expandTo18Decimals } from './shared/utilities'
-import { v2Fixture } from './shared/fixtures'
+import { expandTo18Decimals } from './shared/utilities';
+import { v2Fixture } from './shared/fixtures';
 
-import ExampleSwapToPrice from '../build/ExampleSwapToPrice.json'
+import ExampleSwapToPrice from '../build/ExampleSwapToPrice.json';
 
-chai.use(solidity)
+chai.use(solidity);
 
 const overrides = {
   gasLimit: 9999999,
-}
+};
 
 describe('ExampleSwapToPrice', () => {
   const provider = new MockProvider({
     ganacheOptions: {
       hardfork: 'london',
-      mnemonic: 'simple simple simple simple simple simple simple simple simple simple simple simple',
+      mnemonic:
+        'simple simple simple simple simple simple simple simple simple simple simple simple',
       gasLimit: 9999999,
     },
-  })
-  const [wallet] = provider.getWallets()
-  const loadFixture = createFixtureLoader(provider, [wallet])
+  });
+  const [wallet] = provider.getWallets();
+  const loadFixture = createFixtureLoader(provider, [wallet]);
 
-  let token0: Contract
-  let token1: Contract
-  let pair: Contract
-  let swapToPriceExample: Contract
-  let router: Contract
+  let token0: Contract;
+  let token1: Contract;
+  let pair: Contract;
+  let swapToPriceExample: Contract;
+  let router: Contract;
   beforeEach(async function () {
-    const fixture = await loadFixture(v2Fixture)
-    token0 = fixture.token0
-    token1 = fixture.token1
-    pair = fixture.pair
-    router = fixture.router
+    const fixture = await loadFixture(v2Fixture);
+    token0 = fixture.token0;
+    token1 = fixture.token1;
+    pair = fixture.pair;
+    router = fixture.router;
     swapToPriceExample = await deployContract(
       wallet,
       ExampleSwapToPrice,
       [fixture.factoryV2.address, fixture.router.address],
       overrides
-    )
-  })
+    );
+  });
 
   beforeEach('set up price differential of 1:100', async () => {
-    await token0.transfer(pair.address, expandTo18Decimals(10))
-    await token1.transfer(pair.address, expandTo18Decimals(1000))
-    await pair.sync(overrides)
-  })
+    await token0.transfer(pair.address, expandTo18Decimals(10));
+    await token1.transfer(pair.address, expandTo18Decimals(1000));
+    await pair.sync(overrides);
+  });
 
   beforeEach('approve the swap contract to spend any amount of both tokens', async () => {
-    await token0.approve(swapToPriceExample.address, MaxUint256)
-    await token1.approve(swapToPriceExample.address, MaxUint256)
-  })
+    await token0.approve(swapToPriceExample.address, MaxUint256);
+    await token1.approve(swapToPriceExample.address, MaxUint256);
+  });
 
   it('correct router address', async () => {
-    expect(await swapToPriceExample.router()).to.eq(router.address)
-  })
+    expect(await swapToPriceExample.router()).to.eq(router.address);
+  });
 
   describe('#swapToPrice', () => {
     it('requires non-zero true price inputs', async () => {
@@ -73,7 +74,7 @@ describe('ExampleSwapToPrice', () => {
           wallet.address,
           MaxUint256
         )
-      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_PRICE')
+      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_PRICE');
       await expect(
         swapToPriceExample.swapToPrice(
           token0.address,
@@ -85,7 +86,7 @@ describe('ExampleSwapToPrice', () => {
           wallet.address,
           MaxUint256
         )
-      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_PRICE')
+      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_PRICE');
       await expect(
         swapToPriceExample.swapToPrice(
           token0.address,
@@ -97,14 +98,23 @@ describe('ExampleSwapToPrice', () => {
           wallet.address,
           MaxUint256
         )
-      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_PRICE')
-    })
+      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_PRICE');
+    });
 
     it('requires non-zero max spend', async () => {
       await expect(
-        swapToPriceExample.swapToPrice(token0.address, token1.address, 1, 100, 0, 0, wallet.address, MaxUint256)
-      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_SPEND')
-    })
+        swapToPriceExample.swapToPrice(
+          token0.address,
+          token1.address,
+          1,
+          100,
+          0,
+          0,
+          wallet.address,
+          MaxUint256
+        )
+      ).to.be.revertedWith('ExampleSwapToPrice: ZERO_SPEND');
+    });
 
     it('moves the price to 1:90', async () => {
       await expect(
@@ -128,8 +138,8 @@ describe('ExampleSwapToPrice', () => {
         .to.emit(token0, 'Transfer')
         .withArgs(swapToPriceExample.address, pair.address, '526682316179835569')
         .to.emit(token1, 'Transfer')
-        .withArgs(pair.address, wallet.address, '49890467170695440744')
-    })
+        .withArgs(pair.address, wallet.address, '49890467170695440744');
+    });
 
     it('moves the price to 1:110', async () => {
       await expect(
@@ -153,8 +163,8 @@ describe('ExampleSwapToPrice', () => {
         .to.emit(token1, 'Transfer')
         .withArgs(swapToPriceExample.address, pair.address, '47376582963642643588')
         .to.emit(token0, 'Transfer')
-        .withArgs(pair.address, wallet.address, '451039908682851138')
-    })
+        .withArgs(pair.address, wallet.address, '451039908682851138');
+    });
 
     it('reverse token order', async () => {
       await expect(
@@ -178,8 +188,8 @@ describe('ExampleSwapToPrice', () => {
         .to.emit(token1, 'Transfer')
         .withArgs(swapToPriceExample.address, pair.address, '47376582963642643588')
         .to.emit(token0, 'Transfer')
-        .withArgs(pair.address, wallet.address, '451039908682851138')
-    })
+        .withArgs(pair.address, wallet.address, '451039908682851138');
+    });
 
     it('swap gas cost', async () => {
       const tx = await swapToPriceExample.swapToPrice(
@@ -192,9 +202,9 @@ describe('ExampleSwapToPrice', () => {
         wallet.address,
         MaxUint256,
         overrides
-      )
-      const receipt = await tx.wait()
-      expect(receipt.gasUsed).to.eq('115129')
-    }).retries(2) // gas test is inconsistent
-  })
-})
+      );
+      const receipt = await tx.wait();
+      expect(receipt.gasUsed).to.eq('115129');
+    }).retries(2); // gas test is inconsistent
+  });
+});

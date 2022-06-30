@@ -11,8 +11,14 @@ import { SimswapLibrary } from '../libraries/SimswapLibrary.sol';
 import { SimswapLiquidityMathLibrary } from '../libraries/SimswapLiquidityMathLibrary.sol';
 
 error ExampleSwapToPrice_ZERO_AMOUNT_IN(uint256 amountIn);
-error ExampleSwapToPrice_ZERO_PRICE(uint256 truePriceTokenA, uint256 truePriceTokenB);
-error ExampleSwapToPrice_ZERO_SPEND(uint256 maxSpendTokenA, uint256 maxSpendTokenB);
+error ExampleSwapToPrice_ZERO_PRICE(
+    uint256 truePriceTokenA,
+    uint256 truePriceTokenB
+);
+error ExampleSwapToPrice_ZERO_SPEND(
+    uint256 maxSpendTokenA,
+    uint256 maxSpendTokenB
+);
 
 contract ExampleSwapToPrice {
     using SafeERC20 for IERC20;
@@ -40,23 +46,35 @@ contract ExampleSwapToPrice {
     ) public {
         // true price is expressed as a ratio, so both values must be non-zero
         if (truePriceTokenA == 0 || truePriceTokenB == 0)
-            revert ExampleSwapToPrice_ZERO_PRICE(truePriceTokenA, truePriceTokenB);
+            revert ExampleSwapToPrice_ZERO_PRICE(
+                truePriceTokenA,
+                truePriceTokenB
+            );
         // caller can specify 0 for either if they wish to swap in only one direction, but not both
         if (maxSpendTokenA == 0 && maxSpendTokenB == 0)
-            revert ExampleSwapToPrice_ZERO_SPEND(maxSpendTokenA, maxSpendTokenB);
+            revert ExampleSwapToPrice_ZERO_SPEND(
+                maxSpendTokenA,
+                maxSpendTokenB
+            );
 
         bool aToB;
         uint256 amountIn;
         {
-            (uint256 reserveA, uint256 reserveB) = SimswapLibrary.getReserves(factory, tokenA, tokenB);
-            (aToB, amountIn) = SimswapLiquidityMathLibrary.computeProfitMaximizingTrade(
-                truePriceTokenA, truePriceTokenB,
-                reserveA, reserveB
+            (uint256 reserveA, uint256 reserveB) = SimswapLibrary.getReserves(
+                factory,
+                tokenA,
+                tokenB
             );
+            (aToB, amountIn) = SimswapLiquidityMathLibrary
+                .computeProfitMaximizingTrade(
+                    truePriceTokenA,
+                    truePriceTokenB,
+                    reserveA,
+                    reserveB
+                );
         }
 
-        if (amountIn == 0)
-            revert ExampleSwapToPrice_ZERO_AMOUNT_IN(amountIn);
+        if (amountIn == 0) revert ExampleSwapToPrice_ZERO_AMOUNT_IN(amountIn);
 
         // spend up to the allowance of the token in
         uint256 maxSpend = aToB ? maxSpendTokenA : maxSpendTokenB;

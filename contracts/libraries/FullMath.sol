@@ -12,7 +12,7 @@ library FullMath {
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }
-    
+
     /**
      * @notice Calculates floor(x * y / denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
      * @dev Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv)

@@ -31,7 +31,11 @@ library FixedPoint {
 
     /// @dev Multiply a UQ112x112 by a uint, returning a UQ144x112
     /// reverts on overflow
-    function mul(uq112x112 memory self, uint256 y) internal pure returns (uq144x112 memory result) {
+    function mul(uq112x112 memory self, uint256 y)
+        internal
+        pure
+        returns (uq144x112 memory result)
+    {
         uint256 z = 0;
         unchecked {
             if (y != 0 && (z = self._x * y) / y != self._x)
@@ -42,9 +46,12 @@ library FixedPoint {
 
     /// @dev Return a UQ112x112 which represents the ratio of the numerator to the denominator
     /// can be lossy
-    function fraction(uint256 numerator, uint256 denominator) internal pure returns (uq112x112 memory _fraction) {
-        if (denominator == 0)
-            revert FixedPoint_fraction_division_by_zero();
+    function fraction(uint256 numerator, uint256 denominator)
+        internal
+        pure
+        returns (uq112x112 memory _fraction)
+    {
+        if (denominator == 0) revert FixedPoint_fraction_division_by_zero();
         if (numerator == 0) {
             _fraction._x = 0;
         } else {

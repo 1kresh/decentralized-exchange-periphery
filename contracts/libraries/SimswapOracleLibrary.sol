@@ -15,24 +15,38 @@ library SimswapOracleLibrary {
     }
 
     /// @dev Produces the cumulative price using counterfactuals to save gas and avoid a call to sync.
-    function currentCumulativePrices(
-        address pool
-    ) internal view returns (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp) {
+    function currentCumulativePrices(address pool)
+        internal
+        view
+        returns (
+            uint256 price0Cumulative,
+            uint256 price1Cumulative,
+            uint32 blockTimestamp
+        )
+    {
         blockTimestamp = _blockTimestamp();
         price0Cumulative = ISimswapPool(pool).price0CumulativeLast();
         price1Cumulative = ISimswapPool(pool).price1CumulativeLast();
 
         // if time has elapsed since the last update on the pool, mock the accumulated price values
-        (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) = ISimswapPool(pool).slot0();
+        (
+            uint112 reserve0,
+            uint112 reserve1,
+            uint32 blockTimestampLast
+        ) = ISimswapPool(pool).slot0();
         if (blockTimestampLast != blockTimestamp) {
             // subtraction overflow is desired
             uint32 timeElapsed = blockTimestamp - blockTimestampLast;
             // addition overflow is desired
             // counterfactual
             unchecked {
-                price0Cumulative += uint256(FixedPoint.fraction(reserve1, reserve0)._x) * timeElapsed;
+                price0Cumulative +=
+                    uint256(FixedPoint.fraction(reserve1, reserve0)._x) *
+                    timeElapsed;
                 // counterfactual
-                price1Cumulative += uint256(FixedPoint.fraction(reserve0, reserve1)._x) * timeElapsed;
+                price1Cumulative +=
+                    uint256(FixedPoint.fraction(reserve0, reserve1)._x) *
+                    timeElapsed;
             }
         }
     }

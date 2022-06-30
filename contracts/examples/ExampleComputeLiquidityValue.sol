@@ -17,13 +17,14 @@ contract ExampleComputeLiquidityValue {
         uint256 truePriceTokenA,
         uint256 truePriceTokenB
     ) external view returns (uint256 reserveA, uint256 reserveB) {
-        return SimswapLiquidityMathLibrary.getReservesAfterArbitrage(
-            factory,
-            tokenA,
-            tokenB,
-            truePriceTokenA,
-            truePriceTokenB
-        );
+        return
+            SimswapLiquidityMathLibrary.getReservesAfterArbitrage(
+                factory,
+                tokenA,
+                tokenB,
+                truePriceTokenA,
+                truePriceTokenB
+            );
     }
 
     // see SimswapLiquidityMathLibrary#getLiquidityValue
@@ -31,16 +32,14 @@ contract ExampleComputeLiquidityValue {
         address tokenA,
         address tokenB,
         uint256 liquidityAmount
-    ) external view returns (
-        uint256 tokenAAmount,
-        uint256 tokenBAmount
-    ) {
-        return SimswapLiquidityMathLibrary.getLiquidityValue(
-            factory,
-            tokenA,
-            tokenB,
-            liquidityAmount
-        );
+    ) external view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
+        return
+            SimswapLiquidityMathLibrary.getLiquidityValue(
+                factory,
+                tokenA,
+                tokenB,
+                liquidityAmount
+            );
     }
 
     // see SimswapLiquidityMathLibrary#getLiquidityValueAfterArbitrageToPrice
@@ -50,18 +49,16 @@ contract ExampleComputeLiquidityValue {
         uint256 truePriceTokenA,
         uint256 truePriceTokenB,
         uint256 liquidityAmount
-    ) external view returns (
-        uint256 tokenAAmount,
-        uint256 tokenBAmount
-    ) {
-        return SimswapLiquidityMathLibrary.getLiquidityValueAfterArbitrageToPrice(
-            factory,
-            tokenA,
-            tokenB,
-            truePriceTokenA,
-            truePriceTokenB,
-            liquidityAmount
-        );
+    ) external view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
+        return
+            SimswapLiquidityMathLibrary.getLiquidityValueAfterArbitrageToPrice(
+                factory,
+                tokenA,
+                tokenB,
+                truePriceTokenA,
+                truePriceTokenB,
+                liquidityAmount
+            );
     }
 
     // test function to measure the gas cost of the above function
@@ -71,9 +68,7 @@ contract ExampleComputeLiquidityValue {
         uint256 truePriceTokenA,
         uint256 truePriceTokenB,
         uint256 liquidityAmount
-    ) external view returns (
-        uint256
-    ) {
+    ) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         SimswapLiquidityMathLibrary.getLiquidityValueAfterArbitrageToPrice(
             factory,

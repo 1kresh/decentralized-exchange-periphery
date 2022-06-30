@@ -8,11 +8,20 @@ import { FixedPoint, uq112x112 } from '../libraries/FixedPoint.sol';
 import { SimswapLibrary } from '../libraries/SimswapLibrary.sol';
 import { SimswapOracleLibrary } from '../libraries/SimswapOracleLibrary.sol';
 
-
 error SlidingWindowOracle_GRANULARITY(uint8 granularity_);
-error SlidingWindowOracle_MISSING_HISTORICAL_OBSERVATION(uint256 timeElapsed, uint256 windowSize);
-error SlidingWindowOracle_UNEXPECTED_TIME_ELAPSED(uint256 timeElapsed, uint256 windowSize, uint256 periodSize);
-error SlidingWindowOracle_WINDOW_NOT_EVENLY_DIVISIBLE(uint256 periodSize, uint256 windowSize_);
+error SlidingWindowOracle_MISSING_HISTORICAL_OBSERVATION(
+    uint256 timeElapsed,
+    uint256 windowSize
+);
+error SlidingWindowOracle_UNEXPECTED_TIME_ELAPSED(
+    uint256 timeElapsed,
+    uint256 windowSize,
+    uint256 periodSize
+);
+error SlidingWindowOracle_WINDOW_NOT_EVENLY_DIVISIBLE(
+    uint256 periodSize,
+    uint256 windowSize_
+);
 
 // sliding window oracle that uses observations collected over a window to provide moving price averages in the past
 // `windowSize` with a precision of `windowSize / granularity`
@@ -44,12 +53,22 @@ contract ExampleSlidingWindowOracle {
     // mapping from pool address to a list of price observations of that pool
     mapping(address => Observation[]) public poolObservations;
 
-    constructor(address factory_, uint256 windowSize_, uint8 granularity_) {
+    constructor(
+        address factory_,
+        uint256 windowSize_,
+        uint8 granularity_
+    ) {
         if (granularity_ <= 1)
             revert SlidingWindowOracle_GRANULARITY(granularity_);
         unchecked {
-            if ((periodSize = windowSize_ / granularity_) * granularity_ != windowSize_)
-                revert SlidingWindowOracle_WINDOW_NOT_EVENLY_DIVISIBLE(periodSize, windowSize_);
+            if (
+                (periodSize = windowSize_ / granularity_) * granularity_ !=
+                windowSize_
+            )
+                revert SlidingWindowOracle_WINDOW_NOT_EVENLY_DIVISIBLE(
+                    periodSize,
+                    windowSize_
+                );
         }
         factory = factory_;
         windowSize = windowSize_;
@@ -57,7 +76,11 @@ contract ExampleSlidingWindowOracle {
     }
 
     // returns the index of the observation corresponding to the given timestamp
-    function observationIndexOf(uint256 timestamp) public view returns (uint8 index) {
+    function observationIndexOf(uint256 timestamp)
+        public
+        view
+        returns (uint8 index)
+    {
         unchecked {
             uint256 epochPeriod = timestamp / periodSize;
             return uint8(epochPeriod % granularity);
@@ -65,11 +88,17 @@ contract ExampleSlidingWindowOracle {
     }
 
     // returns the observation from the oldest epoch (at the beginning of the window) relative to the current time
-    function getFirstObservationInWindow(address pool) private view returns (Observation storage firstObservation) {
+    function getFirstObservationInWindow(address pool)
+        private
+        view
+        returns (Observation storage firstObservation)
+    {
         uint8 observationIndex = observationIndexOf(block.timestamp);
         // no overflow issue. if observationIndex + 1 overflows, result is still zero.
         unchecked {
-            firstObservation = poolObservations[pool][(observationIndex + 1) % granularity];
+            firstObservation = poolObservations[pool][
+                (observationIndex + 1) % granularity
+            ];
         }
     }
 
@@ -77,10 +106,10 @@ contract ExampleSlidingWindowOracle {
     // once per epoch period.
     function update(address tokenA, address tokenB) external {
         address pool = SimswapLibrary.poolFor(factory, tokenA, tokenB);
-        
+
         // populate the array with empty observations (first call only)
         uint256 i = poolObservations[pool].length;
-        for (i; i < granularity;) {
+        for (i; i < granularity; ) {
             poolObservations[pool].push();
             unchecked {
                 ++i;
@@ -89,12 +118,18 @@ contract ExampleSlidingWindowOracle {
 
         // get the observation for the current period
         uint8 observationIndex = observationIndexOf(block.timestamp);
-        Observation storage observation = poolObservations[pool][observationIndex];
+        Observation storage observation = poolObservations[pool][
+            observationIndex
+        ];
 
         // we only want to commit updates once per period (i.e. windowSize / granularity)
         uint256 timeElapsed = block.timestamp - observation.timestamp;
         if (timeElapsed > periodSize) {
-            (uint256 price0Cumulative, uint256 price1Cumulative,) = SimswapOracleLibrary.currentCumulativePrices(pool);
+            (
+                uint256 price0Cumulative,
+                uint256 price1Cumulative,
+
+            ) = SimswapOracleLibrary.currentCumulativePrices(pool);
             observation.timestamp = block.timestamp;
             observation.price0Cumulative = price0Cumulative;
             observation.price1Cumulative = price1Cumulative;
@@ -104,12 +139,18 @@ contract ExampleSlidingWindowOracle {
     // given the cumulative prices of the start and end of a period, and the length of the period, compute the average
     // price in terms of how much amount out is received for the amount in
     function computeAmountOut(
-        uint256 priceCumulativeStart, uint256 priceCumulativeEnd,
-        uint256 timeElapsed, uint256 amountIn
+        uint256 priceCumulativeStart,
+        uint256 priceCumulativeEnd,
+        uint256 timeElapsed,
+        uint256 amountIn
     ) private pure returns (uint256 amountOut) {
         // overflow is desired.
         unchecked {
-            uq112x112 memory priceAverage = uq112x112({_x: uint224((priceCumulativeEnd - priceCumulativeStart) / timeElapsed)});
+            uq112x112 memory priceAverage = uq112x112({
+                _x: uint224(
+                    (priceCumulativeEnd - priceCumulativeStart) / timeElapsed
+                )
+            });
             amountOut = priceAverage.mul(amountIn).decode144();
         }
     }
@@ -117,26 +158,53 @@ contract ExampleSlidingWindowOracle {
     // returns the amount out corresponding to the amount in for a given token using the moving average over the time
     // range [now - [windowSize, windowSize - periodSize * 2], now]
     // update must have been called for the bucket corresponding to timestamp `now - windowSize`
-    function consult(address tokenIn, uint256 amountIn, address tokenOut) external view returns (uint256 amountOut) {
+    function consult(
+        address tokenIn,
+        uint256 amountIn,
+        address tokenOut
+    ) external view returns (uint256 amountOut) {
         address pool = SimswapLibrary.poolFor(factory, tokenIn, tokenOut);
         Observation memory firstObservation = getFirstObservationInWindow(pool);
 
         uint256 timeElapsed = block.timestamp - firstObservation.timestamp;
         if (timeElapsed > windowSize)
-            revert SlidingWindowOracle_MISSING_HISTORICAL_OBSERVATION(timeElapsed, windowSize);
+            revert SlidingWindowOracle_MISSING_HISTORICAL_OBSERVATION(
+                timeElapsed,
+                windowSize
+            );
         // should never happen.
         unchecked {
             if (timeElapsed < windowSize - periodSize * 2)
-                revert SlidingWindowOracle_UNEXPECTED_TIME_ELAPSED(timeElapsed, windowSize, periodSize);
+                revert SlidingWindowOracle_UNEXPECTED_TIME_ELAPSED(
+                    timeElapsed,
+                    windowSize,
+                    periodSize
+                );
         }
 
-        (uint256 price0Cumulative, uint256 price1Cumulative,) = SimswapOracleLibrary.currentCumulativePrices(pool);
-        (address token0,) = SimswapLibrary.sortTokens(tokenIn, tokenOut);
+        (
+            uint256 price0Cumulative,
+            uint256 price1Cumulative,
+
+        ) = SimswapOracleLibrary.currentCumulativePrices(pool);
+        (address token0, ) = SimswapLibrary.sortTokens(tokenIn, tokenOut);
 
         if (token0 == tokenIn) {
-            return computeAmountOut(firstObservation.price0Cumulative, price0Cumulative, timeElapsed, amountIn);
+            return
+                computeAmountOut(
+                    firstObservation.price0Cumulative,
+                    price0Cumulative,
+                    timeElapsed,
+                    amountIn
+                );
         } else {
-            return computeAmountOut(firstObservation.price1Cumulative, price1Cumulative, timeElapsed, amountIn);
+            return
+                computeAmountOut(
+                    firstObservation.price1Cumulative,
+                    price1Cumulative,
+                    timeElapsed,
+                    amountIn
+                );
         }
     }
 }
