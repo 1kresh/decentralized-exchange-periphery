@@ -1,6 +1,6 @@
 {
   "name": "@simswap/periphery",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0",
   "description": "🎚 Peripheral smart contracts for interacting with Simswap",
   "engines": {
     "node": "^16.0"
@@ -45,5 +45,13 @@
     "pretest": "yarn compile",
     "test": "mocha"
   },
-  "license": "Unlicensed"
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/1kresh/decentralized-exchange-periphery/issues"
+  },
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "author": "1kresh"
 }
